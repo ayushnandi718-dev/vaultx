@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaultX - Password Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00ffe7">
+<link rel="apple-touch-icon" href="icon.png">
+</head>
+<body>
+<div class="scanline"></div>
+<div class="app" id="app">
+
+  <!-- LOCK SCREEN -->
+  <div id="lock-screen">
+    <div class="lock-title">⟨ VAULT SECURITY ⟩</div>
+    <div class="lock-subtitle" id="lock-subtitle">Draw Pattern to Unlock</div>
+    <div style="position:relative;width:220px;height:220px;">
+      <canvas id="pat-canvas" width="220" height="220"></canvas>
+      <div class="pattern-grid" id="pattern-grid"></div>
+    </div>
+    <div class="pattern-status hint" id="pat-status">Connect at least 4 dots</div>
+    <div class="lock-mode-btns">
+      <button class="lock-mode-btn active" id="btn-unlock" onclick="setLockMode('unlock')">Unlock</button>
+      <button class="lock-mode-btn" id="btn-setpat" onclick="setLockMode('set')">Set Pattern</button>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="main-app">
+    <div class="topbar">
+      <span class="logo">⬡ VAULTX</span>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="openAutoFill()" title="Autofill">⚡</button>
+        <button class="icon-btn" onclick="openGen()" title="Generate Password">⚙</button>
+        <button class="icon-btn lock-btn" onclick="lockApp()" title="Lock">🔒</button>
+      </div>
+    </div>
+    <div class="stats-bar" id="stats-bar"></div>
+    <div class="search-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="search" placeholder="Search vault..." oninput="renderList()">
+      </div>
+      <button class="filter-btn" id="sort-btn" onclick="toggleSort()">A-Z</button>
+    </div>
+    <div class="cats" id="cats"></div>
+    <div class="vault-list" id="vault-list"></div>
+    <button class="fab" onclick="openAdd()">＋ ADD ENTRY</button>
+  </div>
+
+  <!-- ADD / EDIT MODAL -->
+  <div class="modal-bg" id="add-modal">
+    <div class="modal">
+      <div class="modal-title" id="modal-title">NEW ENTRY</div>
+      <div class="field">
+        <label>Site / App Name</label>
+        <input id="f-title" placeholder="e.g. Instagram">
+      </div>
+      <div class="field">
+        <label>Username / Email</label>
+        <input id="f-user" placeholder="your@email.com">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="pw-field-wrap">
+          <input id="f-pw" type="password" placeholder="Enter or generate...">
+          <button class="pw-toggle" onclick="toggleFPw()" title="Show/Hide">👁</button>
+          <button class="pw-gen-btn" onclick="genAndFill()" title="Auto Generate">⚡</button>
+        </div>
+        <div class="strength-bar"><div class="strength-bar-fill" id="strength-fill"></div></div>
+        <div class="strength-label" id="strength-label"></div>
+      </div>
+      <div class="field">
+        <label>URL (optional)</label>
+        <input id="f-url" placeholder="https://instagram.com">
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="f-cat">
+          <option value="social">Social</option>
+          <option value="banking">Banking</option>
+          <option value="email">Email</option>
+          <option value="app">App</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeAdd()">Cancel</button>
+        <button class="btn-save" onclick="saveEntry()">SAVE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GENERATOR MODAL -->
+  <div class="modal-bg" id="gen-modal">
+    <div class="modal">
+      <div class="modal-title">PASSWORD GEN</div>
+      <div class="field">
+        <label>Length: <span id="gen-len-val">16</span></label>
+        <input type="range" min="8" max="32" value="16" id="gen-len"
+          oninput="document.getElementById('gen-len-val').textContent=this.value;generatePw()">
+      </div>
+      <div class="gen-options">
+        <button class="gen-toggle on" id="gt-upper" onclick="toggleGenOpt('upper',this)">ABC</button>
+        <button class="gen-toggle on" id="gt-lower" onclick="toggleGenOpt('lower',this)">abc</button>
+        <button class="gen-toggle on" id="gt-nums"  onclick="toggleGenOpt('nums',this)">123</button>
+        <button class="gen-toggle"    id="gt-syms"  onclick="toggleGenOpt('syms',this)">!@#</button>
+      </div>
+      <div class="gen-pw-display" id="gen-pw-display">Click generate ↓</div>
+      <div class="gen-actions">
+        <button class="gen-btn"         onclick="generatePw()">🔄 Regenerate</button>
+        <button class="gen-btn primary" onclick="copyGen()">📋 Copy</button>
+      </div>
+      <div style="margin-top:12px;">
+        <button class="btn-cancel" style="width:100%;" onclick="closeGen()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTOFILL MODAL -->
+  <div class="modal-bg" id="af-modal">
+    <div class="modal">
+      <div class="modal-title">⚡ AUTOFILL</div>
+      <p class="af-hint">Tap an entry to copy credentials instantly</p>
+      <div id="af-list"></div>
+      <button class="btn-cancel" style="width:100%;margin-top:8px;" onclick="closeAutoFill()">Close</button>
+    </div>
+  </div>
+
+</div><!-- /.app -->
+<script src="app.js"></script>
+</body>
+</html>
